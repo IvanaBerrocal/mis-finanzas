@@ -1,5 +1,5 @@
 {
-  "name": "Finanzas Bot Telegram",
+  "name": "Finanzas Bot Telegram (Gemini)",
   "nodes": [
     {
       "parameters": {
@@ -17,40 +17,39 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" }
-          ]
-        },
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
         "sendBody": true,
         "contentType": "json",
         "body": {
-          "model": "claude-haiku-4-5-20251001",
-          "max_tokens": 400,
-          "system": "Eres un asistente que extrae información financiera de mensajes en español. Responde SOLO con JSON válido, sin texto adicional.\n\nFormato de respuesta:\n{\n  \"type\": \"gasto\" | \"ingreso\" | \"ahorro\" | \"inversion\",\n  \"amount\": number,\n  \"category\": string,\n  \"description\": string,\n  \"date\": \"YYYY-MM-DD\"\n}\n\nCategorías válidas para gastos: Comida y bebida, Supermercado, Restaurante / Delivery, Transporte, Gasolina, Vivienda / Alquiler, Servicios básicos, Salud y farmacia, Educación, Entretenimiento, Ropa y calzado, Tecnología, Viajes, Deporte, Cuidado personal, Mascotas, Regalos, Suscripciones, Otro gasto.\nCategorías para ingresos: Salario, Freelance, Negocio, Inversión, Bono, Regalo, Otro ingreso.\nCategorías para ahorro: Fondo de emergencia, Meta corto plazo, Meta largo plazo, Otro ahorro.\nCategorías para inversion: Acciones, Criptomonedas, Fondos mutuos, Negocio, Bienes raíces, Otra inversión.\n\nSi no puedes extraer la información, responde: {\"error\": \"no_entendido\"}",
-          "messages": [
+          "systemInstruction": {
+            "parts": [
+              {
+                "text": "Eres un asistente que extrae información financiera de mensajes en español. Responde SOLO con JSON válido, sin texto adicional ni bloques de código.\n\nFormato de respuesta:\n{\n  \"type\": \"gasto\" | \"ingreso\" | \"ahorro\" | \"inversion\",\n  \"amount\": number,\n  \"category\": string,\n  \"description\": string,\n  \"date\": \"YYYY-MM-DD\"\n}\n\nCategorías para gasto: Comida y bebida, Supermercado, Restaurante / Delivery, Transporte, Gasolina, Vivienda / Alquiler, Servicios básicos, Salud y farmacia, Educación, Entretenimiento, Ropa y calzado, Tecnología, Viajes, Deporte, Cuidado personal, Mascotas, Regalos, Suscripciones, Otro gasto.\nCategorías para ingreso: Salario, Freelance, Negocio, Inversión, Bono, Regalo, Otro ingreso.\nCategorías para ahorro: Fondo de emergencia, Meta corto plazo, Meta largo plazo, Otro ahorro.\nCategorías para inversion: Acciones, Criptomonedas, Fondos mutuos, Negocio, Bienes raíces, Otra inversión.\n\nSi no puedes extraer la información, responde: {\"error\": \"no_entendido\"}\nUsa la fecha de hoy si no se especifica fecha."
+              }
+            ]
+          },
+          "contents": [
             {
               "role": "user",
-              "content": "={{ $json.message.text }}"
+              "parts": [{ "text": "={{ $json.message.text }}" }]
             }
-          ]
+          ],
+          "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.1
+          }
         },
         "options": {}
       },
-      "id": "claude-extract",
-      "name": "Claude - Extraer gasto",
+      "id": "gemini-extract",
+      "name": "Gemini - Extraer gasto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [460, 300]
     },
     {
       "parameters": {
-        "jsCode": "const body = JSON.parse($input.first().json.content[0].text);\nif (body.error) throw new Error('No entendido');\n\nconst today = new Date().toISOString().split('T')[0];\nconst transaction = {\n  id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),\n  type: body.type,\n  category: body.category,\n  amount: parseFloat(body.amount),\n  description: body.description || '',\n  date: body.date || today,\n  createdAt: new Date().toISOString(),\n  source: 'telegram'\n};\nreturn [{ json: transaction }];"
+        "jsCode": "const response = $input.first().json;\nconst text = response.candidates[0].content.parts[0].text;\nlet body;\ntry {\n  body = JSON.parse(text);\n} catch {\n  throw new Error('Gemini no devolvió JSON válido: ' + text);\n}\nif (body.error) throw new Error('No entendido');\n\nconst today = new Date().toISOString().split('T')[0];\nconst transaction = {\n  id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),\n  type: body.type,\n  category: body.category,\n  amount: parseFloat(body.amount),\n  description: body.description || '',\n  date: body.date || today,\n  createdAt: new Date().toISOString(),\n  source: 'telegram'\n};\nreturn [{ json: transaction }];"
       },
       "id": "parse-transaction",
       "name": "Parsear transacción",
@@ -62,12 +61,10 @@
       "parameters": {
         "method": "GET",
         "url": "https://api.github.com/repos/IvanaBerrocal/mis-finanzas/contents/data/transactions.json",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer {{ $env.GITHUB_TOKEN }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.GITHUB_TOKEN }}" },
             { "name": "Accept", "value": "application/vnd.github+json" },
             { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
           ]
@@ -94,12 +91,10 @@
       "parameters": {
         "method": "PUT",
         "url": "https://api.github.com/repos/IvanaBerrocal/mis-finanzas/contents/data/transactions.json",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer {{ $env.GITHUB_TOKEN }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.GITHUB_TOKEN }}" },
             { "name": "Accept", "value": "application/vnd.github+json" },
             { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
           ]
@@ -122,7 +117,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
-        "text": "=✅ *Registrado*\n📁 {{ $('Parsear transacción').first().json.category }}\n💰 S/ {{ $('Parsear transacción').first().json.amount }}\n📅 {{ $('Parsear transacción').first().json.date }}\n\nVe tu panel: https://ivanaberrocal.github.io/mis-finanzas/",
+        "text": "=✅ *Registrado en tu panel*\n\n📁 {{ $('Parsear transacción').first().json.category }}\n💰 S/ {{ $('Parsear transacción').first().json.amount }}\n📅 {{ $('Parsear transacción').first().json.date }}\n📝 {{ $('Parsear transacción').first().json.description || 'Sin descripción' }}\n\n👉 Ver panel: https://ivanaberrocal.github.io/mis-finanzas/",
         "additionalFields": { "parse_mode": "Markdown" }
       },
       "id": "telegram-reply-ok",
@@ -131,16 +126,35 @@
       "typeVersion": 1.2,
       "position": [1560, 300],
       "credentials": { "telegramApi": { "id": "TU_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "❌ No entendí ese mensaje. Intenta con algo como:\n\n• \"gasté 45 soles en almuerzo\"\n• \"pagué 200 de luz\"\n• \"recibí mi salario 3500\"\n• \"ahorré 500 para emergencias\"",
+        "additionalFields": {}
+      },
+      "id": "telegram-reply-error",
+      "name": "Telegram - Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [700, 500],
+      "credentials": { "telegramApi": { "id": "TU_CREDENTIAL_ID", "name": "Telegram Bot" } }
     }
   ],
   "connections": {
-    "Telegram Trigger": { "main": [[{ "node": "Claude - Extraer gasto", "type": "main", "index": 0 }]] },
-    "Claude - Extraer gasto": { "main": [[{ "node": "Parsear transacción", "type": "main", "index": 0 }]] },
+    "Telegram Trigger": { "main": [[{ "node": "Gemini - Extraer gasto", "type": "main", "index": 0 }]] },
+    "Gemini - Extraer gasto": { "main": [[{ "node": "Parsear transacción", "type": "main", "index": 0 }]] },
     "Parsear transacción": { "main": [[{ "node": "GitHub - Leer transactions.json", "type": "main", "index": 0 }]] },
     "GitHub - Leer transactions.json": { "main": [[{ "node": "Agregar transacción", "type": "main", "index": 0 }]] },
     "Agregar transacción": { "main": [[{ "node": "GitHub - Guardar", "type": "main", "index": 0 }]] },
     "GitHub - Guardar": { "main": [[{ "node": "Telegram - Confirmar", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" },
-  "_comment": "INSTRUCCIONES: 1) Importa este archivo en n8n (Settings > Import). 2) Crea credencial 'Telegram Bot' con tu token de BotFather. 3) En n8n Settings > Environment Variables agrega: ANTHROPIC_API_KEY y GITHUB_TOKEN. 4) Cambia 'IvanaBerrocal/mis-finanzas' si tu repo tiene otro nombre. 5) Activa el workflow."
+  "_instrucciones": {
+    "paso1": "En n8n: Settings > Variables de entorno > agrega GEMINI_API_KEY y GITHUB_TOKEN",
+    "paso2": "Crea credencial 'Telegram Bot' con tu token de BotFather",
+    "paso3": "Importa este archivo en n8n (Settings > Import workflow)",
+    "paso4": "Conecta las credenciales de Telegram en los nodos 'Telegram Trigger' y los nodos de respuesta",
+    "paso5": "Activa el workflow"
+  }
 }
