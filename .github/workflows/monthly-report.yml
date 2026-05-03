@@ -1,0 +1,30 @@
+name: Reporte Mensual de Finanzas
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"  # Primero de cada mes a las 6am UTC
+  workflow_dispatch:       # También se puede disparar manualmente
+
+permissions:
+  contents: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generar reporte del mes anterior
+        run: node scripts/generate-report.js
+
+      - name: Commit del reporte
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add reports/
+          git diff --staged --quiet || git commit -m "📊 Reporte mensual $(date +%Y-%m)"
+          git push

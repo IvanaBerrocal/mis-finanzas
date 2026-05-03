@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ArrowLeftRight, PiggyBank } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, PiggyBank, Settings } from "lucide-react";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transacciones", label: "Transacciones", icon: ArrowLeftRight },
+  { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -33,7 +34,7 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="px-5 py-4 text-xs text-gray-500 border-t border-gray-700">
-        Datos guardados localmente
+        Sincronizado con GitHub
       </div>
     </aside>
   );

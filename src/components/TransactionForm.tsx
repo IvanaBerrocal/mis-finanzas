@@ -31,8 +31,13 @@ export default function TransactionForm({ initial, onClose, onSaved }: Props) {
     if (!initial) setCategory("");
   }, [type, initial]);
 
-  function handleSubmit(e: React.FormEvent) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
+    setError("");
     const t: Transaction = {
       id: initial?.id ?? generateId(),
       type,
@@ -42,7 +47,9 @@ export default function TransactionForm({ initial, onClose, onSaved }: Props) {
       date,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
-    saveTransaction(t);
+    const { ok, error: err } = await saveTransaction(t);
+    setSaving(false);
+    if (!ok && err) setError(err + " — guardado localmente.");
     onSaved();
     onClose();
   }
@@ -134,19 +141,13 @@ export default function TransactionForm({ initial, onClose, onSaved }: Props) {
             />
           </div>
 
+          {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-            >
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors"
-            >
-              {initial ? "Guardar cambios" : "Agregar"}
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-60">
+              {saving ? "Guardando..." : initial ? "Guardar cambios" : "Agregar"}
             </button>
           </div>
         </form>

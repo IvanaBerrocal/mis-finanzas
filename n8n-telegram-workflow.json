@@ -1,0 +1,146 @@
+{
+  "name": "Finanzas Bot Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "finanzas-bot",
+      "credentials": { "telegramApi": { "id": "TU_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "model": "claude-haiku-4-5-20251001",
+          "max_tokens": 400,
+          "system": "Eres un asistente que extrae información financiera de mensajes en español. Responde SOLO con JSON válido, sin texto adicional.\n\nFormato de respuesta:\n{\n  \"type\": \"gasto\" | \"ingreso\" | \"ahorro\" | \"inversion\",\n  \"amount\": number,\n  \"category\": string,\n  \"description\": string,\n  \"date\": \"YYYY-MM-DD\"\n}\n\nCategorías válidas para gastos: Comida y bebida, Supermercado, Restaurante / Delivery, Transporte, Gasolina, Vivienda / Alquiler, Servicios básicos, Salud y farmacia, Educación, Entretenimiento, Ropa y calzado, Tecnología, Viajes, Deporte, Cuidado personal, Mascotas, Regalos, Suscripciones, Otro gasto.\nCategorías para ingresos: Salario, Freelance, Negocio, Inversión, Bono, Regalo, Otro ingreso.\nCategorías para ahorro: Fondo de emergencia, Meta corto plazo, Meta largo plazo, Otro ahorro.\nCategorías para inversion: Acciones, Criptomonedas, Fondos mutuos, Negocio, Bienes raíces, Otra inversión.\n\nSi no puedes extraer la información, responde: {\"error\": \"no_entendido\"}",
+          "messages": [
+            {
+              "role": "user",
+              "content": "={{ $json.message.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "claude-extract",
+      "name": "Claude - Extraer gasto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = JSON.parse($input.first().json.content[0].text);\nif (body.error) throw new Error('No entendido');\n\nconst today = new Date().toISOString().split('T')[0];\nconst transaction = {\n  id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),\n  type: body.type,\n  category: body.category,\n  amount: parseFloat(body.amount),\n  description: body.description || '',\n  date: body.date || today,\n  createdAt: new Date().toISOString(),\n  source: 'telegram'\n};\nreturn [{ json: transaction }];"
+      },
+      "id": "parse-transaction",
+      "name": "Parsear transacción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/IvanaBerrocal/mis-finanzas/contents/data/transactions.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{ $env.GITHUB_TOKEN }}" },
+            { "name": "Accept", "value": "application/vnd.github+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "github-get",
+      "name": "GitHub - Leer transactions.json",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fileData = $('GitHub - Leer transactions.json').first().json;\nconst newTransaction = $('Parsear transacción').first().json;\n\nconst decoded = Buffer.from(fileData.content.replace(/\\n/g, ''), 'base64').toString('utf-8');\nconst transactions = JSON.parse(decoded);\ntransactions.unshift(newTransaction);\n\nconst encoded = Buffer.from(JSON.stringify(transactions, null, 2)).toString('base64');\nreturn [{ json: { content: encoded, sha: fileData.sha, transaction: newTransaction } }];"
+      },
+      "id": "build-update",
+      "name": "Agregar transacción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.github.com/repos/IvanaBerrocal/mis-finanzas/contents/data/transactions.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{ $env.GITHUB_TOKEN }}" },
+            { "name": "Accept", "value": "application/vnd.github+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "message": "=Telegram: {{ $json.transaction.category }} S/ {{ $json.transaction.amount }}",
+          "content": "={{ $json.content }}",
+          "sha": "={{ $json.sha }}"
+        },
+        "options": {}
+      },
+      "id": "github-put",
+      "name": "GitHub - Guardar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=✅ *Registrado*\n📁 {{ $('Parsear transacción').first().json.category }}\n💰 S/ {{ $('Parsear transacción').first().json.amount }}\n📅 {{ $('Parsear transacción').first().json.date }}\n\nVe tu panel: https://ivanaberrocal.github.io/mis-finanzas/",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "telegram-reply-ok",
+      "name": "Telegram - Confirmar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1560, 300],
+      "credentials": { "telegramApi": { "id": "TU_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Claude - Extraer gasto", "type": "main", "index": 0 }]] },
+    "Claude - Extraer gasto": { "main": [[{ "node": "Parsear transacción", "type": "main", "index": 0 }]] },
+    "Parsear transacción": { "main": [[{ "node": "GitHub - Leer transactions.json", "type": "main", "index": 0 }]] },
+    "GitHub - Leer transactions.json": { "main": [[{ "node": "Agregar transacción", "type": "main", "index": 0 }]] },
+    "Agregar transacción": { "main": [[{ "node": "GitHub - Guardar", "type": "main", "index": 0 }]] },
+    "GitHub - Guardar": { "main": [[{ "node": "Telegram - Confirmar", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "_comment": "INSTRUCCIONES: 1) Importa este archivo en n8n (Settings > Import). 2) Crea credencial 'Telegram Bot' con tu token de BotFather. 3) En n8n Settings > Environment Variables agrega: ANTHROPIC_API_KEY y GITHUB_TOKEN. 4) Cambia 'IvanaBerrocal/mis-finanzas' si tu repo tiene otro nombre. 5) Activa el workflow."
+}

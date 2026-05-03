@@ -1,32 +1,45 @@
 "use client";
 import { Transaction } from "./types";
+import { fetchTransactions, writeTransactions } from "./github";
 
-const KEY = "finanzas_transactions";
+const LOCAL_KEY = "finanzas_transactions";
 
-export function getTransactions(): Transaction[] {
+// --- localStorage fallback ---
+export function getLocalTransactions(): Transaction[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(LOCAL_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-export function saveTransaction(t: Transaction): void {
-  const all = getTransactions();
-  const idx = all.findIndex((x) => x.id === t.id);
-  if (idx >= 0) {
-    all[idx] = t;
-  } else {
-    all.unshift(t);
-  }
-  localStorage.setItem(KEY, JSON.stringify(all));
+function setLocalTransactions(t: Transaction[]) {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(t));
 }
 
-export function deleteTransaction(id: string): void {
-  const all = getTransactions().filter((t) => t.id !== id);
-  localStorage.setItem(KEY, JSON.stringify(all));
+// --- Primary: GitHub, fallback: localStorage ---
+export async function loadTransactions(): Promise<{ transactions: Transaction[]; source: "github" | "local" }> {
+  const remote = await fetchTransactions();
+  if (remote.length > 0 || localStorage.getItem("finanzas_github_config")) {
+    setLocalTransactions(remote); // cache locally
+    return { transactions: remote, source: "github" };
+  }
+  return { transactions: getLocalTransactions(), source: "local" };
+}
+
+export async function saveTransaction(t: Transaction): Promise<{ ok: boolean; error?: string }> {
+  const current = getLocalTransactions();
+  const idx = current.findIndex((x) => x.id === t.id);
+  if (idx >= 0) current[idx] = t; else current.unshift(t);
+  setLocalTransactions(current);
+
+  return writeTransactions(current);
+}
+
+export async function removeTransaction(id: string): Promise<{ ok: boolean; error?: string }> {
+  const current = getLocalTransactions().filter((t) => t.id !== id);
+  setLocalTransactions(current);
+  return writeTransactions(current);
 }
 
 export function generateId(): string {
