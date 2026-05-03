@@ -1,0 +1,9 @@
+1:"$Sreact.fragment"
+2:I[27066,["/mis-finanzas/_next/static/chunks/0n5tw2kobfx2x.js","/mis-finanzas/_next/static/chunks/09xokze4l6a-5.js"],"ClientPageRoot"]
+3:I[30409,["/mis-finanzas/_next/static/chunks/0n5tw2kobfx2x.js","/mis-finanzas/_next/static/chunks/09xokze4l6a-5.js","/mis-finanzas/_next/static/chunks/0x9j6qr2d426k.js","/mis-finanzas/_next/static/chunks/16y4.u4nm_4fv.js"],"default"]
+6:I[74124,["/mis-finanzas/_next/static/chunks/0n5tw2kobfx2x.js","/mis-finanzas/_next/static/chunks/09xokze4l6a-5.js"],"OutletBoundary"]
+7:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/mis-finanzas/_next/static/chunks/0x9j6qr2d426k.js","async":true}],["$","script","script-1",{"src":"/mis-finanzas/_next/static/chunks/16y4.u4nm_4fv.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"EfawNNR5i5ZkNMfuRTmYa"}
+4:{}
+5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
+8:null
