@@ -1,5 +1,12 @@
 export type TransactionType = "ingreso" | "gasto" | "ahorro" | "inversion";
 
+export type TransactionOwner = "propios" | "mama";
+
+export const OWNER_LABELS: Record<TransactionOwner, string> = {
+  propios: "Gastos propios",
+  mama: "Gastos mamá",
+};
+
 export const CATEGORIES: Record<TransactionType, string[]> = {
   ingreso: ["Salario", "Freelance", "Negocio", "Inversión", "Bono", "Regalo", "Otro ingreso"],
   gasto: [
@@ -44,6 +51,7 @@ export const TYPE_COLORS: Record<TransactionType, string> = {
 export interface Transaction {
   id: string;
   type: TransactionType;
+  owner: TransactionOwner;
   category: string;
   amount: number;
   description: string;
