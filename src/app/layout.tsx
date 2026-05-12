@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           En móvil: pt-12 (top bar ~48px) + pb-16 (bottom nav ~64px)
           En desktop: sin padding extra, el sidebar ocupa el lado izquierdo
         */}
-        <main className="flex-1 overflow-auto pt-12 pb-16 md:pt-0 md:pb-0">
+        <main className="flex-1 overflow-auto pt-14 pb-16 md:pt-0 md:pb-0">
           {children}
         </main>
       </body>
