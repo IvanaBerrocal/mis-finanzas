@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Transaction, TransactionType, CATEGORIES, TYPE_LABELS } from "@/lib/types";
+import { Transaction, TransactionType, TransactionOwner, CATEGORIES, TYPE_LABELS, OWNER_LABELS } from "@/lib/types";
 import { saveTransaction, generateId } from "@/lib/storage";
 import { X } from "lucide-react";
 
@@ -11,6 +11,7 @@ interface Props {
 }
 
 const typeOrder: TransactionType[] = ["ingreso", "gasto", "ahorro", "inversion"];
+const ownerOrder: TransactionOwner[] = ["propios", "mama"];
 
 const typeStyles: Record<TransactionType, string> = {
   ingreso: "bg-emerald-100 text-emerald-800 border-emerald-300",
@@ -19,8 +20,14 @@ const typeStyles: Record<TransactionType, string> = {
   inversion: "bg-purple-100 text-purple-800 border-purple-300",
 };
 
+const ownerStyles: Record<TransactionOwner, string> = {
+  propios: "bg-teal-100 text-teal-800 border-teal-300",
+  mama: "bg-pink-100 text-pink-800 border-pink-300",
+};
+
 export default function TransactionForm({ initial, onClose, onSaved }: Props) {
   const today = new Date().toISOString().split("T")[0];
+  const [owner, setOwner] = useState<TransactionOwner>(initial?.owner ?? "propios");
   const [type, setType] = useState<TransactionType>(initial?.type ?? "gasto");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [amount, setAmount] = useState(initial?.amount?.toString() ?? "");
@@ -41,6 +48,7 @@ export default function TransactionForm({ initial, onClose, onSaved }: Props) {
     const t: Transaction = {
       id: initial?.id ?? generateId(),
       type,
+      owner,
       category,
       amount: parseFloat(amount),
       description,
@@ -67,6 +75,26 @@ export default function TransactionForm({ initial, onClose, onSaved }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+          {/* Cuenta */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cuenta</label>
+            <div className="grid grid-cols-2 gap-2">
+              {ownerOrder.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setOwner(o)}
+                  className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                    owner === o ? ownerStyles[o] + " border-2" : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  {OWNER_LABELS[o]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Tipo */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
