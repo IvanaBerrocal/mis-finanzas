@@ -67,90 +67,140 @@ export default function DashboardPage() {
   const balance = ingresos - gastos;
   const { score, details } = computeScore(ingresos, gastos, ahorro, inversion);
   const recent = [...transactions].slice(0, 5);
-  const periodLabel = { mes: "Este mes", año: "Este año", todo: "Todo el tiempo" };
+  const periodLabel = { mes: "Este mes", año: "Este año", todo: "Todo" };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {loading ? "Cargando..." : source === "github" ? "✓ Sincronizado con GitHub" : "⚠ Modo local (configura GitHub en Ajustes)"}
-          </p>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+
+      {/* Header — apilado en móvil, horizontal en desktop */}
+      <div className="mb-6">
+        {/* Título + estado sync */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+              {loading
+                ? "Cargando..."
+                : source === "github"
+                ? "✓ Sincronizado con GitHub"
+                : "⚠ Modo local"}
+            </p>
+          </div>
+
+          {/* Reload + Nueva — siempre visibles arriba derecha */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={load}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Recargar"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+            >
+              <Plus size={15} />
+              <span className="hidden xs:inline">Nueva</span>
+              {/* En móvil muy pequeño solo muestra el ícono */}
+              <span className="xs:hidden">+</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-sm">
+
+        {/* Filtro período + Exportar — fila separada en móvil */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-sm flex-1 sm:flex-none">
             {(["mes", "año", "todo"] as const).map((p) => (
-              <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 font-medium transition-colors ${period === p ? "bg-emerald-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`flex-1 sm:flex-none px-3 py-1.5 font-medium transition-colors whitespace-nowrap ${
+                  period === p ? "bg-emerald-600 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
                 {periodLabel[p]}
               </button>
             ))}
           </div>
           <ExportButton transactions={filtered} label="Exportar" />
-          <button onClick={load} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Recargar desde GitHub">
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          </button>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
-            <Plus size={16} /> Nueva
-          </button>
         </div>
       </div>
 
-      {/* Métricas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Ingresos" amount={ingresos} color="green" icon={<TrendingUp size={20} />} />
-        <MetricCard title="Gastos" amount={gastos} color="red" icon={<TrendingDown size={20} />} />
-        <MetricCard title="Ahorro" amount={ahorro} color="blue" icon={<PiggyBank size={20} />} />
-        <MetricCard title="Inversión" amount={inversion} color="purple" icon={<LineChart size={20} />} />
+      {/* Métricas — 2 cols en móvil, 4 en desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <MetricCard title="Ingresos" amount={ingresos} color="green" icon={<TrendingUp size={18} />} />
+        <MetricCard title="Gastos" amount={gastos} color="red" icon={<TrendingDown size={18} />} />
+        <MetricCard title="Ahorro" amount={ahorro} color="blue" icon={<PiggyBank size={18} />} />
+        <MetricCard title="Inversión" amount={inversion} color="purple" icon={<LineChart size={18} />} />
       </div>
 
-      {/* Balance */}
-      <div className={`rounded-xl p-4 mb-6 flex items-center justify-between ${balance >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
-        <div>
-          <p className="text-sm font-medium text-gray-600">Balance neto ({periodLabel[period].toLowerCase()})</p>
-          <p className={`text-3xl font-bold mt-1 ${balance >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-            S/ {Math.abs(balance).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
-            <span className="text-base ml-2 font-normal">{balance >= 0 ? "superávit" : "déficit"}</span>
-          </p>
-        </div>
-        {ingresos > 0 && (
-          <div className="text-right text-sm text-gray-500">
-            <p>Ahorro: {((ahorro / ingresos) * 100).toFixed(1)}%</p>
-            <p>Gastos: {((gastos / ingresos) * 100).toFixed(1)}%</p>
+      {/* Balance — apilado verticalmente en móvil */}
+      <div
+        className={`rounded-xl p-4 mb-6 ${
+          balance >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-gray-600">
+              Balance neto ({periodLabel[period].toLowerCase()})
+            </p>
+            <p className={`text-2xl sm:text-3xl font-bold mt-1 ${balance >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+              S/ {Math.abs(balance).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+              <span className="text-sm sm:text-base ml-2 font-normal">
+                {balance >= 0 ? "superávit" : "déficit"}
+              </span>
+            </p>
           </div>
-        )}
+          {ingresos > 0 && (
+            <div className="flex sm:flex-col gap-4 sm:gap-0 sm:text-right text-sm text-gray-500">
+              <p>Ahorro: <span className="font-medium">{((ahorro / ingresos) * 100).toFixed(1)}%</span></p>
+              <p>Gastos: <span className="font-medium">{((gastos / ingresos) * 100).toFixed(1)}%</span></p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-800 mb-3">Gastos por categoría</h2>
+      {/* Gráficos — 1 col en móvil, 3 cols en desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+          <h2 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Gastos por categoría</h2>
           <SpendingPieChart transactions={filtered} />
         </div>
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-800 mb-3">Últimos 6 meses</h2>
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+          <h2 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Últimos 6 meses</h2>
           <MonthlyBarChart transactions={transactions} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Health + Transacciones */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <HealthScore score={score} details={details} />
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="font-semibold text-gray-800 mb-4">Últimas transacciones</h2>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+          <h2 className="font-semibold text-gray-800 mb-4 text-sm sm:text-base">Últimas transacciones</h2>
           {recent.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">Aún no hay transacciones</p>
           ) : (
             <div className="space-y-3">
               {recent.map((t) => {
-                const typeColor = { ingreso: "text-emerald-600", gasto: "text-red-500", ahorro: "text-blue-600", inversion: "text-purple-600" }[t.type];
+                const typeColor = {
+                  ingreso: "text-emerald-600",
+                  gasto: "text-red-500",
+                  ahorro: "text-blue-600",
+                  inversion: "text-purple-600",
+                }[t.type];
                 return (
-                  <div key={t.id} className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-medium text-gray-800">{t.category}</p>
-                      <p className="text-gray-400 text-xs">{t.date}{t.description && ` · ${t.description}`}</p>
+                  <div key={t.id} className="flex items-center justify-between text-sm gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 truncate">{t.category}</p>
+                      <p className="text-gray-400 text-xs truncate">
+                        {t.date}{t.description && ` · ${t.description}`}
+                      </p>
                     </div>
-                    <span className={`font-semibold ${typeColor}`}>{t.type === "gasto" ? "-" : "+"}S/ {t.amount.toFixed(2)}</span>
+                    <span className={`font-semibold whitespace-nowrap shrink-0 ${typeColor}`}>
+                      {t.type === "gasto" ? "-" : "+"}S/ {t.amount.toFixed(2)}
+                    </span>
                   </div>
                 );
               })}
