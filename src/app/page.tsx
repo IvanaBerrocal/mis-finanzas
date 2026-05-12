@@ -72,43 +72,31 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
 
-      {/* Header — apilado en móvil, horizontal en desktop */}
+      {/* Header */}
       <div className="mb-6">
-        {/* Título + estado sync */}
+
+        {/* Fila 1: Título + Reload */}
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+          <div className="min-w-0 mr-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Dashboard</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">
               {loading
                 ? "Cargando..."
                 : source === "github"
-                ? "✓ Sincronizado con GitHub"
+                ? "✓ GitHub"
                 : "⚠ Modo local"}
             </p>
           </div>
-
-          {/* Reload + Nueva — siempre visibles arriba derecha */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={load}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Recargar"
-            >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-            </button>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-            >
-              <Plus size={15} />
-              <span className="hidden xs:inline">Nueva</span>
-              {/* En móvil muy pequeño solo muestra el ícono */}
-              <span className="xs:hidden">+</span>
-            </button>
-          </div>
+          <button
+            onClick={load}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            title="Recargar"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          </button>
         </div>
 
-        {/* Filtro período + Exportar — fila separada en móvil */}
+        {/* Fila 2: Período + Exportar + Nueva */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-sm flex-1 sm:flex-none">
             {(["mes", "año", "todo"] as const).map((p) => (
@@ -124,10 +112,16 @@ export default function DashboardPage() {
             ))}
           </div>
           <ExportButton transactions={filtered} label="Exportar" />
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors ml-auto sm:ml-0"
+          >
+            <Plus size={15} /> Nueva
+          </button>
         </div>
       </div>
 
-      {/* Métricas — 2 cols en móvil, 4 en desktop */}
+      {/* Métricas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <MetricCard title="Ingresos" amount={ingresos} color="green" icon={<TrendingUp size={18} />} />
         <MetricCard title="Gastos" amount={gastos} color="red" icon={<TrendingDown size={18} />} />
@@ -135,12 +129,8 @@ export default function DashboardPage() {
         <MetricCard title="Inversión" amount={inversion} color="purple" icon={<LineChart size={18} />} />
       </div>
 
-      {/* Balance — apilado verticalmente en móvil */}
-      <div
-        className={`rounded-xl p-4 mb-6 ${
-          balance >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"
-        }`}
-      >
+      {/* Balance */}
+      <div className={`rounded-xl p-4 mb-6 ${balance >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-gray-600">
@@ -162,7 +152,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Gráficos — 1 col en móvil, 3 cols en desktop */}
+      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <h2 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Gastos por categoría</h2>
