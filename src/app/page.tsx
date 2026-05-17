@@ -1,13 +1,86 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { TrendingUp, TrendingDown, PiggyBank, LineChart, Plus, RefreshCw } from "lucide-react";
-import { loadTransactions } from "@/lib/storage";
+import { TrendingUp, TrendingDown, PiggyBank, LineChart, Plus, RefreshCw, Pencil } from "lucide-react";
+import { loadTransactions, saveTransaction, generateId } from "@/lib/storage";
 import { Transaction } from "@/lib/types";
 import MetricCard from "@/components/MetricCard";
 import { SpendingPieChart, MonthlyBarChart } from "@/components/DashboardCharts";
 import HealthScore from "@/components/HealthScore";
 import TransactionForm from "@/components/TransactionForm";
 import ExportButton from "@/components/ExportButton";
+
+// ─── Cierre automático de mes ─────────────────────────────────────────────────
+const CIERRE_KEY = "finanzas_cierres_ejecutados";
+
+function getCierresEjecutados(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CIERRE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function marcarCierreEjecutado(mesKey: string) {
+  const cierres = getCierresEjecutados();
+  if (!cierres.includes(mesKey)) {
+    cierres.push(mesKey);
+    localStorage.setItem(CIERRE_KEY, JSON.stringify(cierres));
+  }
+}
+
+async function ejecutarCierreAutomatico(transactions: Transaction[]): Promise<Transaction | null> {
+  const hoy = new Date();
+  const cierres = getCierresEjecutados();
+
+  const mesesARevisar: { year: number; month: number }[] = [];
+
+  const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  mesesARevisar.push({ year: mesAnterior.getFullYear(), month: mesAnterior.getMonth() });
+
+  const ultimoDiaMesActual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+  if (hoy.getDate() === ultimoDiaMesActual) {
+    mesesARevisar.push({ year: hoy.getFullYear(), month: hoy.getMonth() });
+  }
+
+  for (const { year, month } of mesesARevisar) {
+    const mesKey = `cierre-${year}-${String(month + 1).padStart(2, "0")}`;
+    if (cierres.includes(mesKey)) continue;
+
+    const prefijo = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const delMes = transactions.filter((t) => t.date.startsWith(prefijo) && t.type !== "ahorro");
+
+    const ingresos = delMes.filter((t) => t.type === "ingreso").reduce((s, t) => s + t.amount, 0);
+    const gastos = delMes.filter((t) => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+    const inversion = delMes.filter((t) => t.type === "inversion").reduce((s, t) => s + t.amount, 0);
+    const ahorroNeto = ingresos - gastos - inversion;
+
+    if (ahorroNeto <= 0) {
+      marcarCierreEjecutado(mesKey);
+      continue;
+    }
+
+    const ultimoDia = new Date(year, month + 1, 0);
+    const fechaCierre = `${year}-${String(month + 1).padStart(2, "0")}-${String(ultimoDia.getDate()).padStart(2, "0")}`;
+
+    const nuevaTransaccion: Transaction = {
+      id: generateId(),
+      type: "ahorro",
+      owner: "propios",
+      category: "Cierre de mes automático",
+      amount: ahorroNeto,
+      description: `Cierre automático ${prefijo}: ingresos S/${ingresos.toFixed(2)} - gastos S/${gastos.toFixed(2)} - inversión S/${inversion.toFixed(2)}`,
+      date: fechaCierre,
+      createdAt: new Date().toISOString(),
+    };
+
+    await saveTransaction(nuevaTransaccion);
+    marcarCierreEjecutado(mesKey);
+    return nuevaTransaccion;
+  }
+
+  return null;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function computeScore(ingresos: number, gastos: number, ahorro: number, inversion: number) {
   let score = 0;
@@ -39,14 +112,29 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [source, setSource] = useState<"github" | "local">("local");
   const [showForm, setShowForm] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [period, setPeriod] = useState<"mes" | "año" | "todo">("mes");
   const [loading, setLoading] = useState(true);
+  const [cierreMensaje, setCierreMensaje] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { transactions: t, source: s } = await loadTransactions();
-    setTransactions(t);
-    setSource(s);
+
+    const nuevaCierre = await ejecutarCierreAutomatico(t);
+
+    if (nuevaCierre) {
+      const { transactions: t2, source: s2 } = await loadTransactions();
+      setTransactions(t2);
+      setSource(s2);
+      const mes = nuevaCierre.date.slice(0, 7);
+      setCierreMensaje(`✓ Cierre automático de ${mes} registrado: +S/ ${nuevaCierre.amount.toFixed(2)} en ahorro`);
+      setTimeout(() => setCierreMensaje(null), 6000);
+    } else {
+      setTransactions(t);
+      setSource(s);
+    }
+
     setLoading(false);
   }, []);
 
@@ -72,19 +160,20 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
 
+      {/* Banner cierre automático */}
+      {cierreMensaje && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-xl px-4 py-3 font-medium">
+          {cierreMensaje}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
-
-        {/* Fila 1: Título + Reload */}
         <div className="flex items-center justify-between mb-3">
           <div className="min-w-0 mr-2">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Dashboard</h1>
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">
-              {loading
-                ? "Cargando..."
-                : source === "github"
-                ? "✓ GitHub"
-                : "⚠ Modo local"}
+              {loading ? "Cargando..." : source === "github" ? "✓ GitHub" : "⚠ Modo local"}
             </p>
           </div>
           <button
@@ -96,7 +185,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Fila 2: Período + Exportar + Nueva */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-sm flex-1 sm:flex-none">
             {(["mes", "año", "todo"] as const).map((p) => (
@@ -164,7 +252,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Health + Transacciones */}
+      {/* Health + Transacciones recientes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <HealthScore score={score} details={details} />
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
@@ -181,16 +269,26 @@ export default function DashboardPage() {
                   inversion: "text-purple-600",
                 }[t.type];
                 return (
-                  <div key={t.id} className="flex items-center justify-between text-sm gap-2">
+                  <div key={t.id} className="flex items-center justify-between text-sm gap-2 group">
                     <div className="min-w-0">
                       <p className="font-medium text-gray-800 truncate">{t.category}</p>
                       <p className="text-gray-400 text-xs truncate">
                         {t.date}{t.description && ` · ${t.description}`}
                       </p>
                     </div>
-                    <span className={`font-semibold whitespace-nowrap shrink-0 ${typeColor}`}>
-                      {t.type === "gasto" ? "-" : "+"}S/ {t.amount.toFixed(2)}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`font-semibold whitespace-nowrap ${typeColor}`}>
+                        {t.type === "gasto" ? "-" : "+"}S/ {t.amount.toFixed(2)}
+                      </span>
+                      {/* Botón editar — visible al hacer hover */}
+                      <button
+                        onClick={() => setEditingTransaction(t)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-all"
+                        title="Editar transacción"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -199,7 +297,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {showForm && <TransactionForm onClose={() => setShowForm(false)} onSaved={load} />}
+      {/* Modal nueva transacción */}
+      {showForm && (
+        <TransactionForm
+          onClose={() => setShowForm(false)}
+          onSaved={load}
+        />
+      )}
+
+      {/* Modal editar transacción */}
+      {editingTransaction && (
+        <TransactionForm
+          initial={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+          onSaved={() => { setEditingTransaction(null); load(); }}
+        />
+      )}
     </div>
   );
 }
