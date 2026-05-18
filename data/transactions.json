@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpal0u9ao8kd2",
+    "type": "gasto",
+    "owner": "mama",
+    "category": "Tecnología",
+    "amount": 79.9,
+    "description": "Internet hotel ",
+    "date": "2026-05-17",
+    "createdAt": "2026-05-18T02:25:41.422Z"
+  },
+  {
     "id": "mpal0185pct26",
     "type": "gasto",
     "owner": "mama",
