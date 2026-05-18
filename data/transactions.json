@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpal4ve27hf4n",
+    "type": "ahorro",
+    "owner": "propios",
+    "category": "Meta largo plazo",
+    "amount": 27000,
+    "description": "Departamento",
+    "date": "2026-05-18",
+    "createdAt": "2026-05-18T02:28:49.514Z"
+  },
+  {
     "id": "mpal1um5zqu27",
     "type": "ingreso",
     "owner": "propios",
