@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "mpal0185pct26",
+    "type": "gasto",
+    "owner": "mama",
+    "category": "Servicios básicos",
+    "amount": 39.9,
+    "description": "celular hotel",
+    "date": "2026-05-08",
+    "createdAt": "2026-05-18T02:25:03.797Z"
+  }
+]
