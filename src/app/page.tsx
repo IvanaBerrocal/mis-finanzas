@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TrendingUp, TrendingDown, PiggyBank, LineChart, Plus, RefreshCw, Pencil } from "lucide-react";
 import { loadTransactions, saveTransaction, generateId } from "@/lib/storage";
-import { Transaction } from "@/lib/types";
+import { Transaction, TransactionOwner, OWNER_LABELS } from "@/lib/types";
 import MetricCard from "@/components/MetricCard";
 import { SpendingPieChart, MonthlyBarChart } from "@/components/DashboardCharts";
 import HealthScore from "@/components/HealthScore";
@@ -31,7 +31,6 @@ function marcarCierreEjecutado(mesKey: string) {
 async function ejecutarCierreAutomatico(transactions: Transaction[]): Promise<Transaction | null> {
   const hoy = new Date();
   const cierres = getCierresEjecutados();
-
   const mesesARevisar: { year: number; month: number }[] = [];
 
   const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
@@ -108,19 +107,31 @@ function computeScore(ingresos: number, gastos: number, ahorro: number, inversio
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
+const ownerViewStyles: Record<string, string> = {
+  todo:    "bg-gray-800 text-white border-transparent shadow-sm",
+  propios: "bg-teal-600 text-white border-transparent shadow-sm",
+  mama:    "bg-pink-500 text-white border-transparent shadow-sm",
+};
+
+const ownerViewLabels: Record<string, string> = {
+  todo:    "👤 Todo",
+  propios: "🟢 Mis finanzas",
+  mama:    "🌸 Mamá",
+};
+
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [source, setSource] = useState<"github" | "local">("local");
   const [showForm, setShowForm] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [period, setPeriod] = useState<"mes" | "año" | "todo">("mes");
+  const [ownerView, setOwnerView] = useState<"todo" | TransactionOwner>("todo");
   const [loading, setLoading] = useState(true);
   const [cierreMensaje, setCierreMensaje] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { transactions: t, source: s } = await loadTransactions();
-
     const nuevaCierre = await ejecutarCierreAutomatico(t);
 
     if (nuevaCierre) {
@@ -134,27 +145,31 @@ export default function DashboardPage() {
       setTransactions(t);
       setSource(s);
     }
-
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const now = new Date();
+
   const filtered = transactions.filter((t) => {
-    if (period === "todo") return true;
-    if (period === "mes") return t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
-    return t.date.startsWith(`${now.getFullYear()}`);
+    if (period === "mes" && !t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)) return false;
+    if (period === "año" && !t.date.startsWith(`${now.getFullYear()}`)) return false;
+    if (ownerView !== "todo" && t.owner !== ownerView) return false;
+    return true;
   });
+
+  const recent = transactions
+    .filter((t) => ownerView === "todo" || t.owner === ownerView)
+    .slice(0, 5);
 
   const sum = (type: string) => filtered.filter((t) => t.type === type).reduce((s, t) => s + t.amount, 0);
   const ingresos = sum("ingreso");
-  const gastos = sum("gasto");
-  const ahorro = sum("ahorro");
+  const gastos   = sum("gasto");
+  const ahorro   = sum("ahorro");
   const inversion = sum("inversion");
-  const balance = ingresos - gastos;
+  const balance  = ingresos - gastos;
   const { score, details } = computeScore(ingresos, gastos, ahorro, inversion);
-  const recent = [...transactions].slice(0, 5);
   const periodLabel = { mes: "Este mes", año: "Este año", todo: "Todo" };
 
   return (
@@ -176,15 +191,32 @@ export default function DashboardPage() {
               {loading ? "Cargando..." : source === "github" ? "✓ GitHub" : "⚠ Modo local"}
             </p>
           </div>
-          <button
-            onClick={load}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
-            title="Recargar"
-          >
+          <button onClick={load} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0" title="Recargar">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
 
+        {/* ── Selector de vista ── */}
+        <div className="mb-3">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Ver dashboard de</p>
+          <div className="flex gap-2">
+            {(["todo", "propios", "mama"] as const).map((o) => (
+              <button
+                key={o}
+                onClick={() => setOwnerView(o)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border-2 ${
+                  ownerView === o
+                    ? ownerViewStyles[o]
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {ownerViewLabels[o]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Período + Exportar + Nueva */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-sm flex-1 sm:flex-none">
             {(["mes", "año", "todo"] as const).map((p) => (
@@ -209,11 +241,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Indicador de vista activa */}
+      {ownerView !== "todo" && (
+        <div className={`mb-4 text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-2 ${
+          ownerView === "propios"
+            ? "bg-teal-50 text-teal-700 border border-teal-200"
+            : "bg-pink-50 text-pink-700 border border-pink-200"
+        }`}>
+          {ownerView === "propios" ? "🟢" : "🌸"}
+          Mostrando solo: <strong>{OWNER_LABELS[ownerView]}</strong>
+        </div>
+      )}
+
       {/* Métricas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <MetricCard title="Ingresos" amount={ingresos} color="green" icon={<TrendingUp size={18} />} />
-        <MetricCard title="Gastos" amount={gastos} color="red" icon={<TrendingDown size={18} />} />
-        <MetricCard title="Ahorro" amount={ahorro} color="blue" icon={<PiggyBank size={18} />} />
+        <MetricCard title="Ingresos"  amount={ingresos}  color="green"  icon={<TrendingUp size={18} />} />
+        <MetricCard title="Gastos"    amount={gastos}    color="red"    icon={<TrendingDown size={18} />} />
+        <MetricCard title="Ahorro"    amount={ahorro}    color="blue"   icon={<PiggyBank size={18} />} />
         <MetricCard title="Inversión" amount={inversion} color="purple" icon={<LineChart size={18} />} />
       </div>
 
@@ -222,7 +266,8 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-gray-600">
-              Balance neto ({periodLabel[period].toLowerCase()})
+              Balance neto ({periodLabel[period].toLowerCase()}
+              {ownerView !== "todo" ? ` · ${OWNER_LABELS[ownerView]}` : ""})
             </p>
             <p className={`text-2xl sm:text-3xl font-bold mt-1 ${balance >= 0 ? "text-emerald-700" : "text-red-700"}`}>
               S/ {Math.abs(balance).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
@@ -248,7 +293,11 @@ export default function DashboardPage() {
         </div>
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <h2 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Últimos 6 meses</h2>
-          <MonthlyBarChart transactions={transactions} />
+          <MonthlyBarChart transactions={
+            ownerView === "todo"
+              ? transactions
+              : transactions.filter((t) => t.owner === ownerView)
+          } />
         </div>
       </div>
 
@@ -256,22 +305,38 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <HealthScore score={score} details={details} />
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-          <h2 className="font-semibold text-gray-800 mb-4 text-sm sm:text-base">Últimas transacciones</h2>
+          <h2 className="font-semibold text-gray-800 mb-4 text-sm sm:text-base flex items-center gap-2">
+            Últimas transacciones
+            {ownerView !== "todo" && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                ownerView === "propios" ? "bg-teal-100 text-teal-700" : "bg-pink-100 text-pink-700"
+              }`}>
+                {OWNER_LABELS[ownerView]}
+              </span>
+            )}
+          </h2>
           {recent.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">Aún no hay transacciones</p>
           ) : (
             <div className="space-y-3">
               {recent.map((t) => {
                 const typeColor = {
-                  ingreso: "text-emerald-600",
-                  gasto: "text-red-500",
-                  ahorro: "text-blue-600",
-                  inversion: "text-purple-600",
+                  ingreso:  "text-emerald-600",
+                  gasto:    "text-red-500",
+                  ahorro:   "text-blue-600",
+                  inversion:"text-purple-600",
                 }[t.type];
                 return (
                   <div key={t.id} className="flex items-center justify-between text-sm gap-2 group">
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-800 truncate">{t.category}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-gray-800 truncate">{t.category}</p>
+                        {ownerView === "todo" && t.owner === "mama" && (
+                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-pink-100 text-pink-700 font-medium shrink-0">
+                            Mamá
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-400 text-xs truncate">
                         {t.date}{t.description && ` · ${t.description}`}
                       </p>
@@ -280,11 +345,10 @@ export default function DashboardPage() {
                       <span className={`font-semibold whitespace-nowrap ${typeColor}`}>
                         {t.type === "gasto" ? "-" : "+"}S/ {t.amount.toFixed(2)}
                       </span>
-                      {/* Botón editar — visible al hacer hover */}
                       <button
                         onClick={() => setEditingTransaction(t)}
                         className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-all"
-                        title="Editar transacción"
+                        title="Editar"
                       >
                         <Pencil size={13} />
                       </button>
@@ -297,15 +361,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Modal nueva transacción */}
-      {showForm && (
-        <TransactionForm
-          onClose={() => setShowForm(false)}
-          onSaved={load}
-        />
-      )}
-
-      {/* Modal editar transacción */}
+      {showForm && <TransactionForm onClose={() => setShowForm(false)} onSaved={load} />}
       {editingTransaction && (
         <TransactionForm
           initial={editingTransaction}
