@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpal1um5zqu27",
+    "type": "ingreso",
+    "owner": "propios",
+    "category": "Salario",
+    "amount": 1800,
+    "description": "Sueldo Aecode Abril",
+    "date": "2026-05-01",
+    "createdAt": "2026-05-18T02:26:28.541Z"
+  },
+  {
     "id": "mpal0u9ao8kd2",
     "type": "gasto",
     "owner": "mama",
