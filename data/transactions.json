@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpfymy6kopmie",
+    "type": "gasto",
+    "owner": "propios",
+    "category": "Suscripciones",
+    "amount": 10,
+    "description": "extra de claude",
+    "date": "2026-05-21",
+    "createdAt": "2026-05-21T20:45:38.828Z"
+  },
+  {
     "id": "mpfymjngcu5vu",
     "type": "gasto",
     "owner": "propios",
