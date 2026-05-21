@@ -1,5 +1,15 @@
 [
   {
+    "id": "mperlkhnxml3u",
+    "type": "gasto",
+    "owner": "propios",
+    "category": "Suscripciones",
+    "amount": 80,
+    "description": "claude",
+    "date": "2026-05-21",
+    "createdAt": "2026-05-21T00:40:50.939Z"
+  },
+  {
     "id": "mpal4ve27hf4n",
     "type": "ahorro",
     "owner": "propios",
