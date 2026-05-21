@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpfymjngcu5vu",
+    "type": "gasto",
+    "owner": "propios",
+    "category": "Tecnología",
+    "amount": 89,
+    "description": "Internet ",
+    "date": "2026-05-21",
+    "createdAt": "2026-05-21T20:45:19.996Z"
+  },
+  {
     "id": "mperlkhnxml3u",
     "type": "gasto",
     "owner": "propios",
