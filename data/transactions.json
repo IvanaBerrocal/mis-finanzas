@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpvftqhit9nga",
+    "type": "gasto",
+    "owner": "mama",
+    "category": "Servicios básicos",
+    "amount": 404.1,
+    "description": "LUZ GRAU",
+    "date": "2026-06-01",
+    "createdAt": "2026-06-01T16:43:21.558Z"
+  },
+  {
     "id": "mpvft8jqhe5wy",
     "type": "gasto",
     "owner": "mama",
