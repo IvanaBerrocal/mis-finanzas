@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpvft8jqhe5wy",
+    "type": "gasto",
+    "owner": "mama",
+    "category": "Servicios básicos",
+    "amount": 1424.3,
+    "description": "LUZ 3 MASCARAS",
+    "date": "2026-06-01",
+    "createdAt": "2026-06-01T16:42:58.310Z"
+  },
+  {
     "id": "mpvfqz9u0mez0",
     "type": "ahorro",
     "owner": "propios",
