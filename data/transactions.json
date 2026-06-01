@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpvghb8ml8hkl",
+    "type": "gasto",
+    "owner": "propios",
+    "category": "Cuidado personal",
+    "amount": 120,
+    "description": "Smartfit",
+    "date": "2026-05-26",
+    "createdAt": "2026-06-01T17:01:41.542Z"
+  },
+  {
     "id": "mpvfye2nem4qg",
     "type": "gasto",
     "owner": "mama",
