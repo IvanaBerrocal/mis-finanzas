@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpvfv4nizy77p",
+    "type": "gasto",
+    "owner": "mama",
+    "category": "Servicios básicos",
+    "amount": 90.4,
+    "description": "AGUA GRAU",
+    "date": "2026-06-01",
+    "createdAt": "2026-06-01T16:44:26.574Z"
+  },
+  {
     "id": "mpvftqhit9nga",
     "type": "gasto",
     "owner": "mama",
