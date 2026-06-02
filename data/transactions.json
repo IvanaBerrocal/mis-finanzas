@@ -1,5 +1,15 @@
 [
   {
+    "id": "mpw295982psfz",
+    "type": "ingreso",
+    "owner": "propios",
+    "category": "Salario",
+    "amount": 1845,
+    "description": "Aecode",
+    "date": "2026-06-01",
+    "createdAt": "2026-06-02T03:11:12.092Z"
+  },
+  {
     "id": "mpw27i3t5tucz",
     "type": "ahorro",
     "owner": "propios",
